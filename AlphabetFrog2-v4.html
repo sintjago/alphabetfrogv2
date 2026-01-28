@@ -1,0 +1,1300 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Alphabet Frog</title>
+  <style>
+    :root{
+      --w: 600px;
+      --panel: #ccc;
+      --ink: #111;
+      --muted: #444;
+      --btn: #fff;
+      --btnHover: #eee;
+      --road: #2f2f2f;
+      --safe: #d3d3d3;
+      --river: #3498db;
+      --frog: #006400;
+      --good: #27ae60;
+      --bad: #c0392b;
+      --gold: #f1c40f;
+      --shadow: rgba(0,0,0,0.20);
+    }
+
+    *{ box-sizing:border-box; }
+
+    body{
+      font-family: Arial, sans-serif;
+      background-color: white;
+      color: black;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Keep your canonical 600px design, scale down on small screens */
+    .stage{
+      display:flex;
+      justify-content:center;
+      padding: 10px 0 18px;
+    }
+
+    .game-wrapper{
+      width: var(--w);
+      transform-origin: top center;
+    }
+
+    @media (max-width: 640px){
+      .game-wrapper{
+        transform: scale(calc((100vw - 16px) / 600));
+      }
+    }
+
+    h1.title{
+      margin: 10px 0 6px;
+      font-size: 28px;
+      text-align: center;
+      color: black;
+      letter-spacing: 0.5px;
+    }
+
+    #header{
+      width: var(--w);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      background-color: var(--panel);
+      padding: 6px;
+      gap: 6px;
+      border-radius: 8px;
+      box-shadow: 0 8px 18px var(--shadow);
+    }
+
+    #wordArea{
+      display:flex;
+      flex-direction:column;
+      gap: 4px;
+      min-width: 220px;
+    }
+
+    #wordDisplay{
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 8px;
+      cursor: pointer;
+      display:flex;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      user-select:none;
+    }
+
+    #wordDisplay span{
+      padding: 4px 2px 3px;
+      border-bottom: 2px solid white;
+      transition: transform 120ms ease;
+    }
+
+    #wordDisplay span:active{
+      transform: scale(0.96);
+    }
+
+    .collected{
+      color: lime;
+      border-bottom: 2px solid lime;
+    }
+
+    .nextLetter{
+      border-bottom: 2px solid var(--gold) !important;
+    }
+
+    #statusLine{
+      font-size: 13px;
+      color: #222;
+      padding: 2px 6px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 6px;
+      display:inline-flex;
+      align-items:center;
+      gap: 6px;
+      width: fit-content;
+    }
+
+    #statusDot{
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.06);
+    }
+
+    #controlsWrapper{
+      display:flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content:flex-end;
+    }
+
+    button{
+      background-color: var(--btn);
+      color: #333;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.08);
+    }
+
+    button:hover{ background-color: var(--btnHover); }
+    button:active{ transform: translateY(1px); box-shadow:none; }
+
+    .toggleBtn[aria-pressed="true"]{
+      outline: 2px solid rgba(0,0,0,0.12);
+    }
+
+    #customWordInput, #csvInput{
+      width: 140px;
+      padding: 4px 8px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid #888;
+      background: white;
+    }
+
+    canvas{
+      display:block;
+      background-color: var(--safe);
+      border: 2px solid #fff;
+      margin: 10px auto 0;
+      border-radius: 10px;
+      box-shadow: 0 10px 22px var(--shadow);
+    }
+
+    .bottom-bar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      width: var(--w);
+      margin: 10px auto 0;
+      font-size: 14px;
+      gap: 10px;
+    }
+
+    #scoreBox{
+      font-weight:bold;
+      padding: 6px 10px;
+      background: rgba(240,240,240,0.95);
+      border-radius: 8px;
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+    }
+
+    .meta{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+
+    .pill{
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: bold;
+      color: #222;
+    }
+
+    .livesPips{
+      display:flex;
+      align-items:center;
+      gap: 4px;
+    }
+
+    .pip{
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: white;
+      border: 1px solid rgba(0,0,0,0.25);
+    }
+
+    .pip.on{
+      background: #e74c3c;
+      border-color: rgba(0,0,0,0.25);
+    }
+
+    .csv-section{
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+
+    #instructions{
+      max-width: var(--w);
+      margin: 12px auto 0;
+      font-size: 14px;
+      text-align: center;
+      color: var(--muted);
+    }
+
+    /* Modal overlay */
+    #overlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 50;
+      padding: 18px;
+    }
+
+    #overlay.show{ display:flex; }
+
+    .modal{
+      width: min(520px, 92vw);
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+      padding: 16px 16px 12px;
+    }
+
+    .modal h2{
+      margin: 0 0 8px;
+      font-size: 20px;
+      color: #111;
+    }
+
+    .modal p{
+      margin: 0 0 12px;
+      color: #333;
+      line-height: 1.35;
+    }
+
+    .modal .row{
+      display:flex;
+      gap: 8px;
+      justify-content:flex-end;
+      flex-wrap: wrap;
+    }
+
+    .small{
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="stage">
+    <div class="game-wrapper">
+      <h1 class="title">Alphabet Frog</h1>
+
+      <div id="header">
+        <div id="wordArea">
+          <div id="wordDisplay" title="Click to hear the word"></div>
+          <div id="statusLine" aria-live="polite">
+            <span id="statusDot"></span>
+            <span id="statusText">Collect letters in order.</span>
+          </div>
+        </div>
+
+        <div id="controlsWrapper">
+          <button id="nextBtn">Next</button>
+          <input id="customWordInput" type="text" placeholder="Enter word" />
+          <button id="submitBtn">Submit</button>
+          <button id="newGameBtn">New Game</button>
+          <button id="smoothBtn" class="toggleBtn" aria-pressed="false" title="Smooth movement (optional)">Smooth: Off</button>
+          <button id="pauseBtn" class="toggleBtn" aria-pressed="false" title="Pause">Pause</button>
+        </div>
+      </div>
+
+      <canvas id="gameCanvas" width="600" height="520"></canvas>
+
+      <div class="bottom-bar">
+        <div id="scoreBox">
+          <div class="meta">
+            <span class="pill" id="scorePill">Score: 0</span>
+            <span class="pill" id="wordsPill">Words: 0/5</span>
+            <span class="pill" id="nextPill">Next: -</span>
+          </div>
+
+          <div class="livesPips" title="Lives" aria-label="Lives" id="livesPips"></div>
+
+          <button id="toggleSoundBtn" class="toggleBtn" aria-pressed="true">🔊 On</button>
+        </div>
+
+        <div class="csv-section">
+          <label for="csvInput">Submit custom word list:</label>
+          <input id="csvInput" type="text" placeholder="e.g. cat,dog,bird" />
+          <button id="csvSubmitBtn">Submit</button>
+        </div>
+      </div>
+
+      <div id="instructions">
+        Complete <strong>5 words</strong> and then <strong>cross the road</strong> to win!
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div id="overlay" role="dialog" aria-modal="true" aria-label="Game message">
+    <div class="modal">
+      <h2 id="overlayTitle">Message</h2>
+      <p id="overlayBody">...</p>
+      <div class="row">
+        <button id="overlayNextBtn">Next Word</button>
+        <button id="overlayNewBtn">New Game</button>
+        <button id="overlayCloseBtn">Close</button>
+      </div>
+      <p class="small" id="overlayHint">Tip: Click letters in the word to hear them.</p>
+    </div>
+  </div>
+
+<script>
+/* ---------------------------------------------------------
+   FIX YOU REQUESTED (the root cause shown in your screenshot)
+   ---------------------------------------------------------
+   The frog was being snapped to "band centers" (which put it
+   on the dashed line), while cars were drawn/colliding inside
+   the lane band area. The visual result: frog looked between
+   lanes.
+
+   NEW BEHAVIOR:
+   - The frog "occupies a band" (safe/road/river) and is placed
+     INSIDE the band, not on the band middle stripe.
+   - We choose a frogY that sits a little below the top of the
+     band, matching where cars are visually drawn.
+   - Movement is strictly band-to-band (40px).
+---------------------------------------------------------- */
+
+/* -----------------------------
+   Canvas + Core State
+------------------------------ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const laneHeight = 40;     // 40px bands
+const frogSize   = 14;     // small frog (your earlier change)
+const frogStepX  = 20;     // horizontal step
+const frogStepY  = laneHeight; // always jump one full band
+
+/*
+  IMPORTANT: Frog Y placement within a band.
+
+  Cars are drawn as:
+    car.y = laneTopY
+    car.h = 20
+    and collision box uses:
+      y = laneTopY + (laneHeight - car.h)/2  => laneTopY + 10
+
+  So cars occupy approximately y in [laneTopY+10 .. laneTopY+30].
+
+  If we place frog centered at laneTopY + 13 (for size 14),
+  frog occupies [laneTopY+13 .. laneTopY+27], nicely inside the
+  car "lane body" visually, and never on the dashed midline.
+
+  We'll define a consistent "lane slot" y inside every band:
+*/
+const CAR_H = 20;
+const CAR_Y_OFFSET = (laneHeight - CAR_H) / 2; // 10
+
+// Place frog inside the lane body (same vertical "lane region" as cars)
+function bandSlotY(bandTopY){
+  return bandTopY + CAR_Y_OFFSET + (CAR_H - frogSize) / 2; // 10 + (20-14)/2 = 13
+}
+
+// Start in bottom safe band, but still use the same slot alignment (looks consistent)
+const startY = bandSlotY(canvas.height - laneHeight);
+
+let frog = {
+  x: canvas.width / 2 - frogSize / 2,
+  y: startY,
+  tx: canvas.width / 2 - frogSize / 2,
+  ty: startY,
+  smooth: false
+};
+
+let paused = false;
+let gameOver = false;
+let gameWin = false;
+
+let lives = 1;
+let wordsCompleted = 0;
+let score = 0;
+
+let soundOn = true;
+
+/* -----------------------------
+   Layout + Lanes
+------------------------------ */
+const rivers = [160, 320]; // river bands (y positions)
+const lanesY = [40, 80, 120, 200, 240, 280, 360, 400, 440];  // road bands
+
+/* Bridges */
+const bridgeWidth = 28;
+let riverBridges = []; // array per river: [x1, x2, ...]
+
+function generateBridges(){
+  riverBridges = rivers.map(() => {
+    const count = Math.floor(Math.random() * 3) + 1;
+    const bridges = [];
+    const minDist = bridgeWidth + 12;
+    for (let i = 0; i < count; i++){
+      let tries = 0;
+      let bx;
+      do{
+        bx = Math.random() * (canvas.width - bridgeWidth);
+        tries++;
+      } while (bridges.some(x => Math.abs(x - bx) < minDist) && tries < 50);
+      bridges.push(bx);
+    }
+    return bridges;
+  });
+}
+
+/* -----------------------------
+   Vehicles
+------------------------------ */
+const vehicles = [];
+const vehicleWidth = 30;
+const vehicleHeight = 20;
+
+const carSpeedUnits = [1, 2, 3];
+const carColors = ['#e74c3c','#3498db','#f1c40f','#2ecc71','#9b59b6','#e67e22','#1abc9c','#34495e'];
+
+const laneDirByY = {};
+lanesY.forEach((y, i) => {
+  laneDirByY[y] = (i % 2 === 0) ? 1 : -1;
+});
+
+function speedMultiplier(){
+  return Math.min(1 + wordsCompleted * 0.04, 1.25);
+}
+
+function bonusChance(){
+  const base = 0.02;
+  return Math.max(base - wordsCompleted * 0.002, 0.008);
+}
+
+/* -----------------------------
+   Word Bank + Learning
+------------------------------ */
+const baseAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+let wordBank = ["DOG","CAT","MOON","FISH","BIRD","LION","TREE","BOOK","LOVE","QUIZ"];
+
+let targetWord = "";
+let currentLetterIndex = 0;
+
+/* -----------------------------
+   Speech
+------------------------------ */
+const synth = window.speechSynthesis;
+let speakChain = Promise.resolve();
+
+function cancelSpeech(){
+  try{
+    speakChain = Promise.resolve();
+    if (synth.speaking) synth.cancel();
+  }catch(e){}
+}
+
+function speakQueued(text){
+  if (!soundOn) return Promise.resolve();
+  speakChain = speakChain.then(() => new Promise(resolve => {
+    if (!soundOn) return resolve();
+    try{
+      if (synth.speaking) synth.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "en-US";
+      utter.onend = () => resolve();
+      utter.onerror = () => resolve();
+      utter.oncancel = () => resolve();
+      synth.speak(utter);
+    }catch(e){
+      resolve();
+    }
+  }));
+  return speakChain;
+}
+
+function phonicsCue(letter){
+  const map = { C:"kuh", G:"guh", J:"jay", Q:"kyoo", X:"eks" };
+  return map[letter] ? `${letter}. ${map[letter]}.` : `${letter}.`;
+}
+
+/* -----------------------------
+   UI Helpers
+------------------------------ */
+const elWordDisplay = document.getElementById('wordDisplay');
+const elStatusText = document.getElementById('statusText');
+const elStatusDot = document.getElementById('statusDot');
+
+const elScorePill = document.getElementById('scorePill');
+const elWordsPill = document.getElementById('wordsPill');
+const elNextPill  = document.getElementById('nextPill');
+
+const elLivesPips = document.getElementById('livesPips');
+
+function setStatus(text, tone="gold"){
+  elStatusText.textContent = text;
+  const color = (tone==="good") ? "var(--good)" : (tone==="bad") ? "var(--bad)" : "var(--gold)";
+  elStatusDot.style.background = color;
+}
+
+function sanitizeWord(w){
+  return (w || "")
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "");
+}
+
+function sanitizeCSV(csv){
+  return (csv || "")
+    .split(',')
+    .map(x => sanitizeWord(x.trim()))
+    .filter(x => x.length > 0);
+}
+
+function updateHUD(){
+  elScorePill.textContent = `Score: ${score}`;
+  elWordsPill.textContent = `Words: ${Math.min(wordsCompleted,5)}/5`;
+  const nextLetter = targetWord[currentLetterIndex] || "-";
+  elNextPill.textContent = `Next: ${nextLetter}`;
+  renderLivesPips();
+}
+
+function renderLivesPips(){
+  const show = Math.min(lives, 8);
+  elLivesPips.innerHTML = "";
+  for (let i = 0; i < show; i++){
+    const d = document.createElement('div');
+    d.className = "pip on";
+    elLivesPips.appendChild(d);
+  }
+  for (let i = show; i < Math.min(8, Math.max(3, lives)); i++){
+    const d = document.createElement('div');
+    d.className = "pip";
+    elLivesPips.appendChild(d);
+  }
+  if (lives > 8){
+    const extra = document.createElement('span');
+    extra.style.fontWeight = "bold";
+    extra.style.marginLeft = "6px";
+    extra.textContent = `+${lives - 8}`;
+    elLivesPips.appendChild(extra);
+  }
+}
+
+function updateWordDisplay(){
+  elWordDisplay.innerHTML = "";
+  for (let i = 0; i < targetWord.length; i++){
+    const span = document.createElement('span');
+    span.textContent = targetWord[i];
+
+    if (i < currentLetterIndex) span.classList.add('collected');
+    if (i === currentLetterIndex) span.classList.add('nextLetter');
+
+    span.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const L = targetWord[i];
+      speakQueued(phonicsCue(L));
+    });
+
+    elWordDisplay.appendChild(span);
+  }
+}
+
+/* -----------------------------
+   Modal Overlay
+------------------------------ */
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlayTitle');
+const overlayBody = document.getElementById('overlayBody');
+
+const overlayNextBtn = document.getElementById('overlayNextBtn');
+const overlayNewBtn  = document.getElementById('overlayNewBtn');
+const overlayCloseBtn= document.getElementById('overlayCloseBtn');
+
+function showOverlay(title, body){
+  overlayTitle.textContent = title;
+  overlayBody.textContent = body;
+  overlay.classList.add('show');
+}
+
+function hideOverlay(){
+  overlay.classList.remove('show');
+}
+
+overlayCloseBtn.addEventListener('click', () => hideOverlay());
+overlayNewBtn.addEventListener('click', () => { hideOverlay(); startNewGame(true); });
+overlayNextBtn.addEventListener('click', () => {
+  hideOverlay();
+  chooseRandomWord();
+  resetVehiclesOnly();
+  setStatus(`New word: ${targetWord}. Next letter: ${targetWord[0]}.`, "gold");
+});
+
+/* -----------------------------
+   Word Selection
+------------------------------ */
+function chooseRandomWord(){
+  targetWord = wordBank[Math.floor(Math.random() * wordBank.length)] || "CAT";
+  targetWord = sanitizeWord(targetWord);
+  if (!targetWord) targetWord = "CAT";
+  currentLetterIndex = 0;
+  updateWordDisplay();
+  updateHUD();
+}
+
+function setCustomWord(word){
+  const clean = sanitizeWord(word);
+  if (!clean){
+    setStatus("That word had no letters A–Z. Try again.", "bad");
+    return false;
+  }
+  targetWord = clean;
+  currentLetterIndex = 0;
+  updateWordDisplay();
+  updateHUD();
+  return true;
+}
+
+/* -----------------------------
+   Vehicle Creation
+------------------------------ */
+function createVehiclesForLane(y){
+  const alphabet = [...baseAlphabet];
+  const extraLetters = targetWord.split('').flatMap(l => [l, l]);
+  const allLetters = alphabet.concat(extraLetters);
+
+  const used = new Set();
+  const lettersThisLane = [];
+
+  const numCars = 6;
+  for (let i = 0; i < numCars; i++){
+    let letter;
+    let guard = 0;
+    do{
+      letter = allLetters[Math.floor(Math.random() * allLetters.length)];
+      guard++;
+    } while (used.has(`${y}-${letter}`) && guard < 200);
+    used.add(`${y}-${letter}`);
+    lettersThisLane.push(letter);
+  }
+
+  const minGap = 70;
+  const dir = laneDirByY[y] || 1;
+
+  lettersThisLane.forEach((letter, i) => {
+    const isBonus = Math.random() < bonusChance();
+    const unit = carSpeedUnits[Math.floor(Math.random() * carSpeedUnits.length)];
+    const pxPerSecond = unit * 60;
+
+    let x;
+    if (dir === 1){
+      x = -canvas.width - i * (vehicleWidth + minGap);
+    }else{
+      x = canvas.width + canvas.width + i * (vehicleWidth + minGap);
+    }
+
+    vehicles.push({
+      x,
+      y,
+      w: vehicleWidth,
+      h: vehicleHeight,
+      dir,
+      baseSpeed: pxPerSecond,
+      speed: pxPerSecond,
+      color: isBonus ? '#ff69b4' : carColors[Math.floor(Math.random() * carColors.length)],
+      letter: isBonus ? '1+' : letter,
+      bonus: isBonus,
+      pulse: Math.random() * Math.PI * 2
+    });
+  });
+}
+
+function fullReset(){
+  vehicles.length = 0;
+  generateBridges();
+
+  frog.x = canvas.width / 2 - frogSize / 2;
+  frog.y = startY;
+  frog.tx = frog.x;
+  frog.ty = frog.y;
+
+  gameOver = false;
+  gameWin = false;
+
+  lanesY.forEach(laneY => createVehiclesForLane(laneY));
+}
+
+function resetVehiclesOnly(){
+  vehicles.length = 0;
+  generateBridges();
+  gameOver = false;
+  gameWin = false;
+  lanesY.forEach(laneY => createVehiclesForLane(laneY));
+}
+
+/* -----------------------------
+   Drawing
+------------------------------ */
+function drawBackground(){
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--safe').trim();
+  ctx.fillRect(0, 0, canvas.width, laneHeight);
+  ctx.fillRect(0, canvas.height - laneHeight, canvas.width, laneHeight);
+
+  rivers.forEach((riverY, idx) => {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--river').trim();
+    ctx.fillRect(0, riverY, canvas.width, laneHeight);
+
+    const bridges = riverBridges[idx] || [];
+    bridges.forEach(bridgeX => {
+      const plankW = 5;
+      for (let i = 0; i < bridgeWidth; i += plankW){
+        ctx.fillStyle = (i % (plankW*2) === 0) ? '#f5deb3' : '#deb887';
+        ctx.fillRect(bridgeX + i, riverY, plankW, laneHeight);
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(bridgeX, riverY + 2, bridgeWidth, 2);
+      ctx.fillRect(bridgeX, riverY + laneHeight - 4, bridgeWidth, 2);
+    });
+  });
+
+  lanesY.forEach(y => {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--road').trim();
+    ctx.fillRect(0, y, canvas.width, laneHeight);
+
+    // dashed line in the true center of the band (visual only)
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    for (let i = 0; i < canvas.width; i += 36){
+      ctx.fillRect(i, y + laneHeight/2 - 1, 18, 2);
+    }
+  });
+
+  // separators
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  for (let y = 0; y <= canvas.height; y += laneHeight){
+    ctx.fillRect(0, y, canvas.width, 1);
+  }
+}
+
+function drawFrog(){
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--frog').trim();
+  ctx.fillRect(frog.x, frog.y, frogSize, frogSize);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillRect(frog.x + 3, frog.y + 3, 2, 2);
+  ctx.fillRect(frog.x + frogSize - 5, frog.y + 3, 2, 2);
+}
+
+function drawVehicles(dt){
+  const lanesMap = {};
+  for (let car of vehicles){
+    if (!lanesMap[car.y]) lanesMap[car.y] = [];
+    lanesMap[car.y].push(car);
+  }
+
+  for (let y in lanesMap){
+    const cars = lanesMap[y];
+    const dir = cars[0]?.dir || 1;
+
+    for (let i = 0; i < cars.length; i++){
+      const car = cars[i];
+      car.speed = car.baseSpeed * speedMultiplier();
+
+      let best = null;
+      let bestDist = Infinity;
+
+      for (let j = 0; j < cars.length; j++){
+        if (i === j) continue;
+        const other = cars[j];
+
+        let dist;
+        if (dir === 1){
+          dist = (other.x - car.x);
+          if (dist <= 0) dist += (canvas.width + canvas.width);
+        }else{
+          dist = (car.x - other.x);
+          if (dist <= 0) dist += (canvas.width + canvas.width);
+        }
+
+        if (dist < bestDist){
+          bestDist = dist;
+          best = other;
+        }
+      }
+
+      const desiredGap = car.w + 14;
+      if (best && bestDist < desiredGap){
+        car.speed = Math.min(car.speed, best.speed);
+      }
+    }
+
+    for (let i = 0; i < cars.length; i++){
+      const car = cars[i];
+      car.x += (car.dir === 1 ? 1 : -1) * car.speed * dt;
+
+      if (car.dir === 1 && car.x > canvas.width + 70){
+        car.x = -vehicleWidth - Math.random() * 80;
+        car.baseSpeed = carSpeedUnits[Math.floor(Math.random() * carSpeedUnits.length)] * 60;
+      } else if (car.dir === -1 && car.x < -vehicleWidth - 70){
+        car.x = canvas.width + vehicleWidth + Math.random() * 80;
+        car.baseSpeed = carSpeedUnits[Math.floor(Math.random() * carSpeedUnits.length)] * 60;
+      }
+
+      if (car.bonus){
+        car.pulse += dt * 6;
+        const glow = 0.35 + 0.25 * Math.sin(car.pulse);
+        ctx.save();
+        ctx.shadowColor = `rgba(255,105,180,${glow})`;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = car.color;
+        ctx.fillRect(car.x, car.y + CAR_Y_OFFSET, car.w, car.h); // <-- align to lane body
+        ctx.restore();
+      }else{
+        ctx.fillStyle = car.color;
+        ctx.fillRect(car.x, car.y + CAR_Y_OFFSET, car.w, car.h); // <-- align to lane body
+      }
+
+      ctx.fillStyle = 'white';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(car.letter, car.x + car.w/2, car.y + CAR_Y_OFFSET + car.h/2);
+    }
+  }
+}
+
+/* -----------------------------
+   Collisions (AABB)
+------------------------------ */
+function rectsOverlap(a, b){
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+
+function frogRect(){
+  return { x: frog.x, y: frog.y, w: frogSize, h: frogSize };
+}
+
+function handleCarCollisions(){
+  const fr = frogRect();
+
+  for (let i = vehicles.length - 1; i >= 0; i--){
+    const car = vehicles[i];
+    if (!lanesY.includes(car.y)) continue;
+
+    const cr = { x: car.x, y: car.y + CAR_Y_OFFSET, w: car.w, h: car.h }; // <-- lane body
+    if (!rectsOverlap(fr, cr)) continue;
+
+    if (car.bonus){
+      lives++;
+      updateHUD();
+      setStatus("Bonus! +1 life.", "good");
+      vehicles.splice(i, 1);
+      speakQueued("Extra life!");
+      continue;
+    }
+
+    const expected = targetWord[currentLetterIndex];
+
+    if (car.letter === expected){
+      const got = car.letter;
+      vehicles.splice(i, 1);
+
+      currentLetterIndex++;
+      updateWordDisplay();
+      updateHUD();
+
+      setStatus(`Nice! Collected ${got}. Next: ${targetWord[currentLetterIndex] || "done!"}`, "good");
+      speakQueued(phonicsCue(got));
+
+      if (currentLetterIndex >= targetWord.length){
+        wordsCompleted++;
+        score++;
+        updateHUD();
+
+        setStatus(`Word complete: ${targetWord}. New word incoming...`, "good");
+
+        speakQueued(targetWord).then(() => {
+          chooseRandomWord();
+          resetVehiclesOnly();
+          setStatus(`New word: ${targetWord}. Next letter: ${targetWord[0]}.`, "gold");
+        });
+      }
+    }else{
+      lives--;
+      updateHUD();
+      setStatus(`Oops. Needed ${expected}, got ${car.letter}.`, "bad");
+      speakQueued(`No. Needed ${expected}.`);
+
+      if (lives <= 0){
+        triggerGameOver();
+      }else{
+        respawnFrog();
+      }
+      return;
+    }
+  }
+}
+
+/* -----------------------------
+   Rivers
+------------------------------ */
+function frogInRiverBand(){
+  const fr = frogRect();
+  for (let i = 0; i < rivers.length; i++){
+    const ry = rivers[i];
+    const band = { x: 0, y: ry, w: canvas.width, h: laneHeight };
+    if (rectsOverlap(fr, band)) return i;
+  }
+  return -1;
+}
+
+function frogOnBridge(riverIndex){
+  const bridges = riverBridges[riverIndex] || [];
+  const fr = frogRect();
+  const ry = rivers[riverIndex];
+  return bridges.some(bx => rectsOverlap(fr, { x: bx, y: ry, w: bridgeWidth, h: laneHeight }));
+}
+
+function handleRiverHazard(){
+  const idx = frogInRiverBand();
+  if (idx === -1) return;
+
+  if (!frogOnBridge(idx)){
+    lives--;
+    updateHUD();
+    setStatus("Splash! You missed the bridge.", "bad");
+    speakQueued("Splash!");
+    if (lives <= 0){
+      triggerGameOver();
+    }else{
+      respawnFrog();
+    }
+  }
+}
+
+/* -----------------------------
+   Win Condition
+------------------------------ */
+function checkWin(){
+  // top safe band: frog is in it when frog.y <= slotY(0) (or smaller)
+  if (frog.y <= bandSlotY(0) + 0.1 && wordsCompleted >= 5){
+    gameWin = true;
+    paused = true;
+    cancelSpeech();
+    setStatus("You win!", "good");
+    speakQueued("You win!");
+    spawnConfetti();
+    showOverlay("You Win! 🐸🏁", `You completed 5 words and crossed the road. Score: ${score}.`);
+  }
+}
+
+/* -----------------------------
+   Game Over / Respawn / Reset
+------------------------------ */
+function respawnFrog(){
+  frog.x = canvas.width / 2 - frogSize / 2;
+  frog.y = startY;
+  frog.tx = frog.x;
+  frog.ty = frog.y;
+}
+
+function triggerGameOver(){
+  gameOver = true;
+  paused = true;
+  cancelSpeech();
+  speakQueued("Game over.");
+  showOverlay("Game Over", `You ran out of lives. Score: ${score}. Words: ${Math.min(wordsCompleted,5)}/5.`);
+}
+
+function startNewGame(hard=false){
+  hideOverlay();
+  cancelSpeech();
+
+  if (hard){
+    score = 0;
+    lives = 1;
+    wordsCompleted = 0;
+  }
+
+  paused = false;
+  gameOver = false;
+  gameWin = false;
+
+  chooseRandomWord();
+  fullReset();
+
+  setStatus(`New game. Next letter: ${targetWord[0]}.`, "gold");
+}
+
+/* -----------------------------
+   Confetti
+------------------------------ */
+let confetti = [];
+
+function spawnConfetti(){
+  confetti = [];
+  for (let i = 0; i < 90; i++){
+    confetti.push({
+      x: canvas.width/2,
+      y: 20,
+      vx: (Math.random() - 0.5) * 320,
+      vy: 80 + Math.random() * 260,
+      g: 420 + Math.random() * 240,
+      r: 2 + Math.random() * 3,
+      life: 1.2 + Math.random() * 0.8
+    });
+  }
+}
+
+function updateConfetti(dt){
+  if (!confetti.length) return;
+  for (let i = confetti.length - 1; i >= 0; i--){
+    const p = confetti[i];
+    p.life -= dt;
+    p.vy += p.g * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    if (p.life <= 0) confetti.splice(i, 1);
+  }
+
+  ctx.save();
+  for (const p of confetti){
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* -----------------------------
+   Input (prevent scroll + snap to BAND SLOT)
+------------------------------ */
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+/*
+  This is the key change:
+  - Y snapping uses bandSlotY(...) not center.
+  - Therefore frog is always visually "inside lanes", aligned
+    with car bodies, not on dashed midlines.
+*/
+function snapToGrid(){
+  // X grid
+  frog.tx = Math.round(frog.tx / frogStepX) * frogStepX;
+  frog.tx = clamp(frog.tx, 0, canvas.width - frogSize);
+
+  // Determine nearest band top, then snap to slot inside that band
+  const bandTop = Math.round(frog.ty / laneHeight) * laneHeight;
+  frog.ty = clamp(bandSlotY(bandTop), 0, canvas.height - frogSize);
+
+  if (!frog.smooth){
+    frog.x = frog.tx;
+    frog.y = frog.ty;
+  }
+}
+
+function moveFrogBy(dx, dy){
+  if (gameOver || gameWin) return;
+  if (paused) return;
+
+  frog.tx = clamp(frog.tx + dx, 0, canvas.width - frogSize);
+
+  // Move by whole bands, then snap into the band slot
+  frog.ty = clamp(frog.ty + dy, 0, canvas.height - frogSize);
+
+  snapToGrid();
+
+  if (!frog.smooth){
+    handleRiverHazard();
+    checkWin();
+  }
+}
+
+function onKeyDown(e){
+  const keys = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"];
+  if (keys.includes(e.key)) e.preventDefault();
+
+  if (e.key === "p" || e.key === "P"){
+    togglePause();
+    return;
+  }
+
+  if (paused || gameOver || gameWin) return;
+
+  switch (e.key){
+    case "ArrowUp":    moveFrogBy(0, -frogStepY); break;
+    case "ArrowDown":  moveFrogBy(0, frogStepY); break;
+    case "ArrowLeft":  moveFrogBy(-frogStepX, 0); break;
+    case "ArrowRight": moveFrogBy(frogStepX, 0); break;
+  }
+}
+
+window.addEventListener('keydown', onKeyDown, { passive: false });
+
+/* -----------------------------
+   Buttons + Controls
+------------------------------ */
+document.getElementById('wordDisplay').addEventListener('click', () => {
+  speakQueued(targetWord);
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  if (paused && !gameOver && !gameWin) return;
+  chooseRandomWord();
+  resetVehiclesOnly();
+  setStatus(`Next word: ${targetWord}. Next letter: ${targetWord[0]}.`, "gold");
+});
+
+document.getElementById('submitBtn').addEventListener('click', () => {
+  const custom = document.getElementById('customWordInput').value.trim();
+  if (custom.length > 0){
+    if (setCustomWord(custom)){
+      resetVehiclesOnly();
+      setStatus(`Custom word set: ${targetWord}.`, "gold");
+    }
+  }
+});
+
+document.getElementById('csvSubmitBtn').addEventListener('click', () => {
+  const csv = document.getElementById('csvInput').value.trim();
+  if (csv.length > 0){
+    const cleaned = sanitizeCSV(csv);
+    if (!cleaned.length){
+      setStatus("No valid words found in that CSV.", "bad");
+      return;
+    }
+    wordBank = cleaned;
+    chooseRandomWord();
+    resetVehiclesOnly();
+    setStatus(`Loaded ${wordBank.length} custom words. New word: ${targetWord}.`, "good");
+  }
+});
+
+document.getElementById('newGameBtn').addEventListener('click', () => {
+  startNewGame(true);
+});
+
+function togglePause(){
+  paused = !paused;
+  const btn = document.getElementById('pauseBtn');
+  btn.setAttribute("aria-pressed", paused ? "true" : "false");
+  btn.textContent = paused ? "Resume" : "Pause";
+  if (paused){
+    setStatus("Paused. Press Resume (or P) to continue.", "gold");
+    cancelSpeech();
+  }else{
+    setStatus(`Back to it. Next letter: ${targetWord[currentLetterIndex] || "-"}.`, "gold");
+  }
+}
+
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+document.getElementById('smoothBtn').addEventListener('click', () => {
+  frog.smooth = !frog.smooth;
+  const btn = document.getElementById('smoothBtn');
+  btn.setAttribute("aria-pressed", frog.smooth ? "true" : "false");
+  btn.textContent = frog.smooth ? "Smooth: On" : "Smooth: Off";
+  setStatus(frog.smooth ? "Smooth movement enabled." : "Grid movement enabled.", "gold");
+  snapToGrid();
+});
+
+document.getElementById('toggleSoundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  localStorage.setItem("alphabetFrog_soundOn", soundOn ? "1" : "0");
+
+  const btn = document.getElementById('toggleSoundBtn');
+  btn.textContent = soundOn ? "🔊 On" : "🔇 Off";
+  btn.setAttribute("aria-pressed", soundOn ? "true" : "false");
+
+  if (!soundOn) cancelSpeech();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden){
+    paused = true;
+    const btn = document.getElementById('pauseBtn');
+    btn.setAttribute("aria-pressed", "true");
+    btn.textContent = "Resume";
+    cancelSpeech();
+  }
+});
+
+(function initSoundPref(){
+  const saved = localStorage.getItem("alphabetFrog_soundOn");
+  if (saved === "0"){
+    soundOn = false;
+    const btn = document.getElementById('toggleSoundBtn');
+    btn.textContent = "🔇 Off";
+    btn.setAttribute("aria-pressed", "false");
+  }
+})();
+
+/* -----------------------------
+   Main Loop
+------------------------------ */
+let lastT = performance.now();
+
+function step(now){
+  const dt = Math.min((now - lastT) / 1000, 0.04);
+  lastT = now;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBackground();
+
+  // Smooth movement toward target
+  if (!paused && frog.smooth && !gameOver && !gameWin){
+    const ease = 22;
+    frog.x += (frog.tx - frog.x) * Math.min(1, ease * dt);
+    frog.y += (frog.ty - frog.y) * Math.min(1, ease * dt);
+
+    if (Math.abs(frog.tx - frog.x) < 0.4) frog.x = frog.tx;
+    if (Math.abs(frog.ty - frog.y) < 0.4) frog.y = frog.ty;
+
+    if (frog.x === frog.tx && frog.y === frog.ty){
+      handleRiverHazard();
+      checkWin();
+    }
+  }
+
+  drawFrog();
+
+  if (!paused && !gameOver && !gameWin){
+    drawVehicles(dt);
+    handleCarCollisions();
+  }else{
+    drawVehicles(0);
+  }
+
+  updateConfetti(dt);
+
+  requestAnimationFrame(step);
+}
+
+/* -----------------------------
+   Start Up
+------------------------------ */
+function init(){
+  chooseRandomWord();
+  fullReset();
+  snapToGrid(); // snaps into lane slot
+  updateHUD();
+  setStatus(`New word: ${targetWord}. Next letter: ${targetWord[0]}.`, "gold");
+  requestAnimationFrame(step);
+}
+
+init();
+</script>
+</body>
+</html>
+```
