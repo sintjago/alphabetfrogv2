@@ -1,0 +1,1914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Alphabet Frog</title>
+  <style>
+    :root{
+      --w: 600px;
+      --panel: #ccc;
+      --ink: #111;
+      --muted: #444;
+      --btn: #fff;
+      --btnHover: #eee;
+      --road: #2f2f2f;
+      --safe: #d3d3d3;
+      --river: #3498db;
+      --frog: #006400;
+      --good: #27ae60;
+      --bad: #c0392b;
+      --gold: #f1c40f;
+      --shadow: rgba(0,0,0,0.20);
+      --softBorder: rgba(0,0,0,0.10);
+      --focusRing: rgba(241,196,15,0.75);
+    }
+    *{ box-sizing:border-box; }
+    body{
+      font-family: Arial, sans-serif;
+      background-color: white;
+      color: black;
+      margin: 0;
+      padding: 0;
+      overscroll-behavior: none;
+    }
+
+    /* Keep canonical 600px; scale down on small screens */
+    .stage{
+      display:flex;
+      justify-content:center;
+      padding: 10px 0 18px;
+      touch-action: manipulation;
+    }
+    .game-wrapper{
+      width: var(--w);
+      transform-origin: top center;
+    }
+    @media (max-width: 640px){
+      .game-wrapper{ transform: scale(calc((100vw - 16px) / 600)); }
+    }
+
+    h1.title{
+      margin: 10px 0 6px;
+      font-size: 28px;
+      text-align: center;
+      color: black;
+      letter-spacing: 0.5px;
+      user-select:none;
+    }
+
+    #header{
+  width: var(--w);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  background-color: var(--panel);
+  padding: 6px;
+  border-radius: 10px;
+  box-shadow: 0 8px 18px var(--shadow);
+  overflow: hidden; /* prevents any visual spill */
+}
+
+#wordArea{
+  display:flex;
+  flex-direction:column;
+  gap: 4px;
+  min-width: 0;        /* IMPORTANT: allows shrink inside grid */
+  flex: 1 1 auto;      /* harmless to keep; grid ignores it */
+}
+
+    #wordDisplay{
+      font-size: 24px;
+      font-weight: bold;
+      letter-spacing: 8px;
+      cursor: pointer;
+      display:flex;
+      flex-wrap: nowrap;
+      white-space: nowrap;
+      user-select:none;
+      align-items:flex-end;
+      min-height: 34px;
+    }
+
+    #wordDisplay span{
+	min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+      padding: 4px 2px 3px;
+      border-bottom: 2px solid white;
+      transition: transform 120ms ease, opacity 120ms ease;
+    }
+    #wordDisplay span:active{ transform: scale(0.96); }
+    .collected{ color: lime; border-bottom: 2px solid lime; }
+    .nextLetter{ border-bottom: 2px solid var(--gold) !important; }
+    .hiddenWord{ opacity: 0.20; filter: blur(0.6px); }
+
+    #statusLine{
+      font-size: 13px;
+      color: #222;
+      padding: 2px 6px;
+      background: rgba(255,255,255,0.7);
+      border-radius: 6px;
+      display:inline-flex;
+      align-items:center;
+      gap: 6px;
+      width: fit-content;
+      user-select:none;
+    }
+    #statusDot{
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 0 2px rgba(0,0,0,0.06);
+    }
+
+    #controlsWrapper{
+  display:flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items:flex-start;
+  justify-content:flex-end;
+  max-width: 320px;
+  flex: 0 0 auto;
+}
+
+    button{
+      background-color: var(--btn);
+      color: #333;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 2px 0 rgba(0,0,0,0.08);
+      user-select:none;
+    }
+    button:hover{ background-color: var(--btnHover); }
+    button:active{ transform: translateY(1px); box-shadow:none; }
+
+    .toggleBtn[aria-pressed="true"]{
+      outline: 2px solid rgba(0,0,0,0.12);
+    }
+
+    #customWordInput, #csvInput{
+      width: 140px;
+      padding: 4px 8px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #888;
+      background: white;
+    }
+
+    canvas{
+      display:block;
+      background-color: var(--safe);
+      border: 2px solid #fff;
+      margin: 10px auto 0;
+      border-radius: 12px;
+      box-shadow: 0 10px 22px var(--shadow);
+      touch-action: none;
+    }
+
+    .bottom-bar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      width: var(--w);
+      margin: 10px auto 0;
+      font-size: 14px;
+      gap: 10px;
+    }
+
+    #scoreBox{
+      font-weight:bold;
+      padding: 6px 10px;
+      background: rgba(240,240,240,0.95);
+      border-radius: 10px;
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+    }
+
+    .meta{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex-wrap: wrap;
+    }
+    .pill{
+      background: rgba(255,255,255,0.9);
+      border: 1px solid var(--softBorder);
+      border-radius: 999px;
+      padding: 4px 10px;
+      font-weight: bold;
+      color: #222;
+      user-select:none;
+      white-space: nowrap;
+    }
+
+    .livesPips{
+      display:flex;
+      align-items:center;
+      gap: 4px;
+      user-select:none;
+    }
+    .pip{
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: white;
+      border: 1px solid rgba(0,0,0,0.25);
+    }
+    .pip.on{ background: #e74c3c; border-color: rgba(0,0,0,0.25); }
+
+    .csv-section{
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content:flex-end;
+    }
+
+    #instructions{
+      max-width: var(--w);
+      margin: 12px auto 0;
+      font-size: 14px;
+      text-align: center;
+      color: var(--muted);
+      user-select:none;
+    }
+
+    /* Settings Drawer (adds; does not remove existing controls) */
+    #settingsWrap{
+      width: var(--w);
+      margin: 8px auto 0;
+    }
+    details.settings{
+      background: rgba(240,240,240,0.95);
+      border: 1px solid var(--softBorder);
+      border-radius: 12px;
+      padding: 8px 10px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.10);
+    }
+    details.settings summary{
+      cursor: pointer;
+      font-weight: bold;
+      user-select:none;
+      list-style: none;
+      display:flex;
+      align-items:center;
+      gap: 8px;
+    }
+    details.settings summary::-webkit-details-marker{ display:none; }
+    .settingsGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 10px;
+      margin-top: 10px;
+      font-size: 13px;
+      color: #222;
+    }
+    .row{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .settingsGrid label{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      user-select:none;
+    }
+    .settingsGrid input[type="checkbox"], .settingsGrid input[type="radio"]{
+      width: 16px;
+      height: 16px;
+      accent-color: #333;
+    }
+    .settingsGrid select{
+      padding: 4px 8px;
+      border-radius: 8px;
+      border: 1px solid #888;
+      background: white;
+      font-size: 13px;
+    }
+    .settingsGrid .full{
+      grid-column: 1 / -1;
+    }
+    .mini{
+      font-size: 12px;
+      color: #555;
+    }
+
+    /* Modal Overlay */
+    #overlay{
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 50;
+      padding: 18px;
+    }
+    #overlay.show{ display:flex; }
+    .modal{
+      width: min(520px, 92vw);
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 18px 50px rgba(0,0,0,0.35);
+      padding: 16px 16px 12px;
+    }
+    .modal h2{ margin: 0 0 8px; font-size: 20px; color: #111; }
+    .modal p{ margin: 0 0 12px; color: #333; line-height: 1.35; }
+    .modal .rowBtns{ display:flex; gap: 8px; justify-content:flex-end; flex-wrap: wrap; }
+    .small{ font-size: 12px; color: #666; }
+
+    /* Mobile D-pad (only shown when touch detected) */
+    #dpad{
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      display:none;
+      z-index: 40;
+      user-select:none;
+    }
+    #dpad.show{ display:block; }
+    .pad{
+      width: 150px;
+      height: 150px;
+      background: rgba(240,240,240,0.92);
+      border: 1px solid var(--softBorder);
+      border-radius: 18px;
+      box-shadow: 0 10px 26px rgba(0,0,0,0.20);
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 8px;
+      padding: 10px;
+      backdrop-filter: blur(3px);
+    }
+    .pad button{
+      padding: 0;
+      font-size: 18px;
+      border-radius: 14px;
+      height: 100%;
+      width: 100%;
+    }
+    .pad .empty{ opacity: 0; pointer-events:none; }
+	
+	@media (max-width: 640px){
+  #header{ grid-template-columns: 1fr; }
+  #controlsWrapper{
+    max-width: 100%;
+    justify-content:flex-start;
+  }
+}
+  </style>
+</head>
+
+<body>
+  <div class="stage">
+    <div class="game-wrapper">
+      <h1 class="title">Alphabet Frog</h1>
+
+      <div id="header">
+        <div id="wordArea">
+          <div id="wordDisplay" title="Click the word to hear it (or click letters to hear them)"></div>
+          <div id="statusLine" aria-live="polite">
+            <span id="statusDot"></span>
+            <span id="statusText">Collect letters in order.</span>
+          </div>
+        </div>
+
+        <!-- Existing controls kept (not removed) -->
+        <div id="controlsWrapper">
+          <button id="nextBtn">Next</button>
+          <input id="customWordInput" type="text" placeholder="Enter word" />
+          <button id="submitBtn">Submit</button>
+          <button id="newGameBtn">New Game</button>
+          <button id="smoothBtn" class="toggleBtn" aria-pressed="false" title="Smooth movement (optional)">Smooth: Off</button>
+          <button id="pauseBtn" class="toggleBtn" aria-pressed="false" title="Pause">Pause</button>
+        </div>
+      </div>
+
+      <!-- Added Settings Drawer (no feature removed) -->
+      <div id="settingsWrap">
+        <details class="settings" id="settingsDetails">
+          <summary>⚙️ Settings <span class="mini">(learning + fairness + controls)</span></summary>
+          <div class="settingsGrid">
+            <div class="row">
+              <label><input type="checkbox" id="optHighlight" /> Highlight next-letter cars</label>
+            </div>
+            <div class="row">
+              <label><input type="checkbox" id="optBeacon" /> Show next-letter beacon</label>
+            </div>
+
+            <div class="row">
+              <label><input type="checkbox" id="optCarClick" /> Click cars to hear letters</label>
+            </div>
+            <div class="row">
+              <label><input type="checkbox" id="optReplayBtn" /> Show “Replay feedback” button</label>
+            </div>
+
+            <div class="row">
+              <label><input type="checkbox" id="optHitGrace" /> Micro “hit grace” after hopping</label>
+            </div>
+            <div class="row">
+              <label><input type="checkbox" id="optSpawnSafe" /> Spawn safety (no respawn on frog)</label>
+            </div>
+
+            <div class="row">
+              <label><input type="checkbox" id="optBridgeLabels" /> Bridge labels</label>
+            </div>
+            <div class="row">
+              <label><input type="checkbox" id="optDpad" /> Mobile D-pad</label>
+            </div>
+
+            <div class="full row" style="justify-content:space-between;">
+              <div class="row">
+                <span style="font-weight:bold;">Learning mode:</span>
+                <label><input type="radio" name="mode" value="spell" /> Spell</label>
+                <label><input type="radio" name="mode" value="listen" /> Listen-first</label>
+              </div>
+              <div class="row">
+                <label><input type="checkbox" id="optHideWord" /> Hide word until 1st correct</label>
+                <label><input type="checkbox" id="optPhonics" /> Phonics cues</label>
+              </div>
+            </div>
+
+            <div class="full row" style="justify-content:space-between;">
+              <div class="row">
+                <label><input type="checkbox" id="optAssist" /> Adaptive help (more next letters if struggling)</label>
+                <label><input type="checkbox" id="optAdaptiveWords" /> Adaptive word choice</label>
+              </div>
+              <div class="row">
+                <label for="optWordLen">Max word length:</label>
+                <select id="optWordLen">
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                  <option value="6" selected>6</option>
+                  <option value="7">7</option>
+                  <option value="10">10</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="full mini">
+              Tip: press <b>P</b> to Pause/Resume. On touch devices, turn on Mobile D-pad for comfy controls.
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <canvas id="gameCanvas" width="600" height="520"></canvas>
+
+      <div class="bottom-bar">
+        <div id="scoreBox">
+          <div class="meta">
+            <span class="pill" id="scorePill">Score: 0</span>
+            <span class="pill" id="wordsPill">Words: 0/5</span>
+            <span class="pill" id="nextPill">Next: -</span>
+            <button id="replayBtn" style="display:none;">Replay</button>
+          </div>
+
+          <div class="livesPips" title="Lives" aria-label="Lives" id="livesPips"></div>
+
+          <button id="toggleSoundBtn" class="toggleBtn" aria-pressed="true">🔊 On</button>
+        </div>
+
+        <div class="csv-section">
+          <label for="csvInput">Submit custom word list:</label>
+          <input id="csvInput" type="text" placeholder="e.g. cat,dog,bird" />
+          <button id="csvSubmitBtn">Submit</button>
+        </div>
+      </div>
+
+      <div id="instructions">
+        Complete <strong>5 words</strong> and then <strong>cross the road</strong> to win!
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile D-pad -->
+  <div id="dpad">
+    <div class="pad">
+      <button class="empty">·</button>
+      <button id="padUp">▲</button>
+      <button class="empty">·</button>
+      <button id="padLeft">◀</button>
+      <button class="empty">·</button>
+      <button id="padRight">▶</button>
+      <button class="empty">·</button>
+      <button id="padDown">▼</button>
+      <button class="empty">·</button>
+    </div>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div id="overlay" role="dialog" aria-modal="true" aria-label="Game message">
+    <div class="modal">
+      <h2 id="overlayTitle">Message</h2>
+      <p id="overlayBody">...</p>
+      <div class="rowBtns">
+        <button id="overlayNextBtn">Next Word</button>
+        <button id="overlayNewBtn">New Game</button>
+        <button id="overlayCloseBtn">Close</button>
+      </div>
+      <p class="small" id="overlayHint">Tip: Click letters in the word to hear them.</p>
+    </div>
+  </div>
+
+<script>
+/* =========================================================
+   Alphabet Frog (Upgraded, single-file, no features removed)
+
+   Added:
+   - Frog snaps INTO lane bodies (already fixed) + hop arc
+   - Next-letter highlights + optional beacon arrows
+   - Micro hit-grace after hopping + spawn safety option
+   - Settings drawer with learning modes, toggles
+   - Listen-first + optional hide word until first correct
+   - Phonics cues option, replay last feedback
+   - Optional click cars to hear letters
+   - Mobile D-pad (optional; auto-detect touch)
+   - Visual juice: collect pops, confetti, gentle speed easing
+   - Adaptive assistance + adaptive word selection (optional)
+   - Performance: pooled particles, pause skips stepping
+========================================================= */
+
+/* -----------------------------
+   Canvas + Core State
+------------------------------ */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const laneHeight = 40;
+const frogSize = 14;         // keep small, stable
+const frogStepX = 20;
+const frogStepY = laneHeight;
+
+const CAR_H = 20;
+const CAR_Y_OFFSET = (laneHeight - CAR_H) / 2; // 10
+function bandSlotY(bandTopY){
+  return bandTopY + CAR_Y_OFFSET + (CAR_H - frogSize) / 2; // 13
+}
+const startY = bandSlotY(canvas.height - laneHeight);
+
+let paused = false;
+let gameOver = false;
+let gameWin = false;
+
+let lives = 1;
+let wordsCompleted = 0;
+let score = 0;
+
+let soundOn = true;
+
+/* Hit-grace after hop (fairness) */
+let hopGraceTimer = 0;
+const HOP_GRACE_SECONDS = 0.12;
+
+/* Hop animation (even in grid mode) */
+let hop = {
+  active:false,
+  t:0,
+  dur:0.14,
+  sx:0, sy:0,
+  ex:0, ey:0
+};
+
+let frog = {
+  x: canvas.width / 2 - frogSize / 2,
+  y: startY,
+  tx: canvas.width / 2 - frogSize / 2,
+  ty: startY,
+  smooth: false
+};
+
+/* -----------------------------
+   Layout + Lanes
+------------------------------ */
+const rivers = [160, 320];
+const lanesY = [40, 80, 120, 200, 240, 280, 360, 400, 440];
+
+/* Bridges */
+const bridgeWidth = 28;
+let riverBridges = [];
+function generateBridges(){
+  riverBridges = rivers.map(() => {
+    const count = Math.floor(Math.random() * 3) + 1;
+    const bridges = [];
+    const minDist = bridgeWidth + 14;
+    for (let i = 0; i < count; i++){
+      let tries = 0;
+      let bx;
+      do{
+        bx = Math.random() * (canvas.width - bridgeWidth);
+        tries++;
+      } while (bridges.some(x => Math.abs(x - bx) < minDist) && tries < 50);
+      bridges.push(bx);
+    }
+    return bridges;
+  });
+}
+
+/* -----------------------------
+   Vehicles
+------------------------------ */
+const vehicles = [];
+const vehicleWidth = 30;
+const vehicleHeight = 20;
+
+const carSpeedUnits = [1, 2, 3];
+const carColors = ['#e74c3c','#3498db','#f1c40f','#2ecc71','#9b59b6','#e67e22','#1abc9c','#34495e'];
+
+const laneDirByY = {};
+lanesY.forEach((y, i) => laneDirByY[y] = (i % 2 === 0) ? 1 : -1);
+
+/* Difficulty easing (smooth ramp) */
+let speedRamp = 0; // 0..1
+function targetSpeedRamp(){
+  return Math.min(wordsCompleted / 12, 1);
+}
+function speedMultiplier(){
+  // eased ramp from 1 to 1.25
+  const t = speedRamp;
+  const ease = t*t*(3 - 2*t);
+  return 1 + 0.25 * ease;
+}
+function bonusChance(){
+  const base = 0.02;
+  return Math.max(base - wordsCompleted * 0.002, 0.008);
+}
+
+/* -----------------------------
+   Word Bank + Learning
+------------------------------ */
+const baseAlphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+let wordBank = ["DOG","CAT","MOON","FISH","BIRD","LION","TREE","BOOK","LOVE","QUIZ"];
+
+let targetWord = "";
+let currentLetterIndex = 0;
+
+/* Mist tracking (adaptive) */
+const missByLetter = {}; // letter -> count
+let lastFeedback = "Collect letters in order.";
+let lastFeedbackSpeak = "";
+let firstCorrectInWord = false;
+
+/* -----------------------------
+   Speech
+------------------------------ */
+const synth = window.speechSynthesis;
+let speakChain = Promise.resolve();
+function cancelSpeech(){
+  try{
+    speakChain = Promise.resolve();
+    if (synth.speaking) synth.cancel();
+  }catch(e){}
+}
+function speakQueued(text){
+  if (!soundOn) return Promise.resolve();
+  speakChain = speakChain.then(() => new Promise(resolve => {
+    if (!soundOn) return resolve();
+    try{
+      if (synth.speaking) synth.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "en-US";
+      utter.onend = () => resolve();
+      utter.onerror = () => resolve();
+      utter.oncancel = () => resolve();
+      synth.speak(utter);
+    }catch(e){ resolve(); }
+  }));
+  return speakChain;
+}
+
+/* Phonics map (simple, lightweight) */
+const PHONICS = {
+  A:"A for Apple", B:"B for Ball", C:"C for Cat", D:"D for Dog", E:"E for Elephant",
+  F:"F for Fish", G:"G for Goat", H:"H for Hat", I:"I for Iguana", J:"J for Juice",
+  K:"K for Kite", L:"L for Lion", M:"M for Moon", N:"N for Nose", O:"O for Orange",
+  P:"P for Pizza", Q:"Q for Queen", R:"R for Robot", S:"S for Sun", T:"T for Tree",
+  U:"U for Umbrella", V:"V for Violin", W:"W for Whale", X:"X for Xylophone",
+  Y:"Y for Yo-yo", Z:"Z for Zebra"
+};
+function letterCue(letter){
+  const L = String(letter || "").toUpperCase();
+  if (!L) return "";
+  if (settings.phonics) return PHONICS[L] || `${L}`;
+  return `${L}`;
+}
+
+/* -----------------------------
+   UI Elements
+------------------------------ */
+const elWordDisplay = document.getElementById('wordDisplay');
+const elStatusText = document.getElementById('statusText');
+const elStatusDot = document.getElementById('statusDot');
+
+const elScorePill = document.getElementById('scorePill');
+const elWordsPill = document.getElementById('wordsPill');
+const elNextPill  = document.getElementById('nextPill');
+
+const elLivesPips = document.getElementById('livesPips');
+const replayBtn = document.getElementById('replayBtn');
+
+/* Settings controls */
+const optHighlight = document.getElementById('optHighlight');
+const optBeacon = document.getElementById('optBeacon');
+const optCarClick = document.getElementById('optCarClick');
+const optReplayBtn = document.getElementById('optReplayBtn');
+const optHitGrace = document.getElementById('optHitGrace');
+const optSpawnSafe = document.getElementById('optSpawnSafe');
+const optBridgeLabels = document.getElementById('optBridgeLabels');
+const optDpad = document.getElementById('optDpad');
+const optHideWord = document.getElementById('optHideWord');
+const optPhonics = document.getElementById('optPhonics');
+const optAssist = document.getElementById('optAssist');
+const optAdaptiveWords = document.getElementById('optAdaptiveWords');
+const optWordLen = document.getElementById('optWordLen');
+
+const modeRadios = [...document.querySelectorAll('input[name="mode"]')];
+
+/* Settings state (persisted) */
+const settings = {
+  highlight: true,
+  beacon: true,
+  carClick: false,
+  replay: true,
+  hitGrace: true,
+  spawnSafe: true,
+  bridgeLabels: true,
+  dpad: true,
+
+  mode: "spell",        // spell | listen
+  hideWord: false,
+  phonics: false,
+
+  assist: true,
+  adaptiveWords: true,
+  maxWordLen: 6
+};
+
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem("alphabetFrog_settings_v1");
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (!s || typeof s !== "object") return;
+    for (const k in settings){
+      if (k in s) settings[k] = s[k];
+    }
+  }catch(e){}
+}
+function saveSettings(){
+  try{
+    localStorage.setItem("alphabetFrog_settings_v1", JSON.stringify(settings));
+  }catch(e){}
+}
+
+function applySettingsToUI(){
+  optHighlight.checked = !!settings.highlight;
+  optBeacon.checked = !!settings.beacon;
+  optCarClick.checked = !!settings.carClick;
+  optReplayBtn.checked = !!settings.replay;
+  optHitGrace.checked = !!settings.hitGrace;
+  optSpawnSafe.checked = !!settings.spawnSafe;
+  optBridgeLabels.checked = !!settings.bridgeLabels;
+  optDpad.checked = !!settings.dpad;
+
+  optHideWord.checked = !!settings.hideWord;
+  optPhonics.checked = !!settings.phonics;
+
+  optAssist.checked = !!settings.assist;
+  optAdaptiveWords.checked = !!settings.adaptiveWords;
+  optWordLen.value = String(settings.maxWordLen);
+
+  modeRadios.forEach(r => r.checked = (r.value === settings.mode));
+
+  replayBtn.style.display = settings.replay ? "" : "none";
+
+  // Dpad visibility (only on touch-capable, plus option)
+  const touchCapable = isTouchDevice();
+  document.getElementById('dpad').classList.toggle('show', touchCapable && settings.dpad);
+}
+
+/* wire settings */
+function bindSetting(el, key, castFn = v => v){
+  el.addEventListener('change', () => {
+    settings[key] = castFn(el.type === "checkbox" ? el.checked : el.value);
+    saveSettings();
+    applySettingsToUI();
+    // Some settings affect vehicle distribution
+    resetVehiclesOnly();
+    updateWordDisplay();
+  });
+}
+
+bindSetting(optHighlight, "highlight", v => !!v);
+bindSetting(optBeacon, "beacon", v => !!v);
+bindSetting(optCarClick, "carClick", v => !!v);
+bindSetting(optReplayBtn, "replay", v => !!v);
+bindSetting(optHitGrace, "hitGrace", v => !!v);
+bindSetting(optSpawnSafe, "spawnSafe", v => !!v);
+bindSetting(optBridgeLabels, "bridgeLabels", v => !!v);
+bindSetting(optDpad, "dpad", v => !!v);
+bindSetting(optHideWord, "hideWord", v => !!v);
+bindSetting(optPhonics, "phonics", v => !!v);
+bindSetting(optAssist, "assist", v => !!v);
+bindSetting(optAdaptiveWords, "adaptiveWords", v => !!v);
+bindSetting(optWordLen, "maxWordLen", v => Number(v) || 6);
+
+modeRadios.forEach(r => {
+  r.addEventListener('change', () => {
+    if (r.checked){
+      settings.mode = r.value;
+      saveSettings();
+      applySettingsToUI();
+      // If switching to listen-first, speak immediately
+      if (settings.mode === "listen"){
+        speakQueued(`Listen. The word is ${targetWord}.`);
+      }
+      updateWordDisplay();
+    }
+  });
+});
+
+/* -----------------------------
+   Status + HUD
+------------------------------ */
+function setStatus(text, tone="gold", speakText=""){
+  elStatusText.textContent = text;
+  const color = (tone==="good") ? "var(--good)" : (tone==="bad") ? "var(--bad)" : "var(--gold)";
+  elStatusDot.style.background = color;
+
+  lastFeedback = text;
+  lastFeedbackSpeak = speakText || "";
+}
+
+function sanitizeWord(w){
+  return (w || "").toUpperCase().replace(/[^A-Z]/g, "");
+}
+function sanitizeCSV(csv){
+  return (csv || "").split(',').map(x => sanitizeWord(x.trim())).filter(x => x.length > 0);
+}
+
+function renderLivesPips(){
+  const show = Math.min(lives, 8);
+  elLivesPips.innerHTML = "";
+  for (let i = 0; i < show; i++){
+    const d = document.createElement('div');
+    d.className = "pip on";
+    elLivesPips.appendChild(d);
+  }
+  for (let i = show; i < Math.min(8, Math.max(3, lives)); i++){
+    const d = document.createElement('div');
+    d.className = "pip";
+    elLivesPips.appendChild(d);
+  }
+  if (lives > 8){
+    const extra = document.createElement('span');
+    extra.style.fontWeight = "bold";
+    extra.style.marginLeft = "6px";
+    extra.textContent = `+${lives - 8}`;
+    elLivesPips.appendChild(extra);
+  }
+}
+
+function updateHUD(){
+  elScorePill.textContent = `Score: ${score}`;
+  elWordsPill.textContent = `Words: ${Math.min(wordsCompleted,5)}/5`;
+  const nextLetter = targetWord[currentLetterIndex] || "-";
+  elNextPill.textContent = `Next: ${nextLetter}`;
+  renderLivesPips();
+
+  // Responsive letter spacing: reduce if word long
+  const len = targetWord.length || 1;
+  const spacing = (len >= 8) ? 4 : (len >= 6) ? 6 : 8;
+  elWordDisplay.style.letterSpacing = spacing + "px";
+}
+
+/* hide word until first correct in listen mode (or whenever toggled) */
+function updateWordDisplay(){
+  elWordDisplay.innerHTML = "";
+  const hide = settings.hideWord && settings.mode === "listen" && !firstCorrectInWord;
+
+  for (let i = 0; i < targetWord.length; i++){
+    const span = document.createElement('span');
+    span.textContent = targetWord[i];
+
+    if (hide) span.classList.add('hiddenWord');
+
+    if (i < currentLetterIndex) span.classList.add('collected');
+    if (i === currentLetterIndex) span.classList.add('nextLetter');
+
+    span.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const L = targetWord[i];
+      speakQueued(letterCue(L));
+    });
+
+    elWordDisplay.appendChild(span);
+  }
+  updateHUD();
+}
+
+/* Replay feedback */
+replayBtn.addEventListener('click', () => {
+  if (!settings.replay) return;
+  if (lastFeedbackSpeak) speakQueued(lastFeedbackSpeak);
+  else speakQueued(lastFeedback);
+});
+
+/* -----------------------------
+   Modal Overlay
+------------------------------ */
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.getElementById('overlayTitle');
+const overlayBody = document.getElementById('overlayBody');
+
+const overlayNextBtn = document.getElementById('overlayNextBtn');
+const overlayNewBtn  = document.getElementById('overlayNewBtn');
+const overlayCloseBtn= document.getElementById('overlayCloseBtn');
+
+function showOverlay(title, body){
+  overlayTitle.textContent = title;
+  overlayBody.textContent = body;
+  overlay.classList.add('show');
+}
+function hideOverlay(){ overlay.classList.remove('show'); }
+
+overlayCloseBtn.addEventListener('click', () => hideOverlay());
+overlayNewBtn.addEventListener('click', () => { hideOverlay(); startNewGame(true); });
+overlayNextBtn.addEventListener('click', () => {
+  hideOverlay();
+  chooseWordSmart();
+  resetVehiclesOnly();
+  setStatus(`New word: ${targetWord}. Next letter: ${targetWord[0]}.`, "gold", `New word. ${targetWord}.`);
+});
+
+/* -----------------------------
+   Word Selection (Adaptive)
+------------------------------ */
+function chooseRandomWordRaw(){
+  let w = wordBank[Math.floor(Math.random() * wordBank.length)] || "CAT";
+  w = sanitizeWord(w);
+  if (!w) w = "CAT";
+  return w;
+}
+
+function pickAdaptiveWord(){
+  // Prefer shorter words if struggling and option enabled
+  const maxLen = Math.max(3, Math.min(10, settings.maxWordLen || 6));
+  const pool = wordBank.map(sanitizeWord).filter(Boolean);
+
+  // If no pool, fallback
+  if (!pool.length) return "CAT";
+
+  // Determine "trouble letter"
+  let trouble = null;
+  let troubleScore = 0;
+  for (const k in missByLetter){
+    if (missByLetter[k] > troubleScore){
+      troubleScore = missByLetter[k];
+      trouble = k;
+    }
+  }
+
+  // Base candidates: <= maxLen
+  let candidates = pool.filter(w => w.length <= maxLen);
+  if (!candidates.length) candidates = pool;
+
+  // If trouble letter exists, bias toward words that contain it early
+  if (trouble && troubleScore >= 3){
+    const filtered = candidates.filter(w => w.includes(trouble));
+    if (filtered.length) candidates = filtered;
+  }
+
+  // Also bias toward variety (avoid repeating same word too much)
+  const w = candidates[Math.floor(Math.random() * candidates.length)];
+  return w || chooseRandomWordRaw();
+}
+
+function chooseWordSmart(){
+  targetWord = (settings.adaptiveWords ? pickAdaptiveWord() : chooseRandomWordRaw());
+
+  // Apply max length limit (even in non-adaptive, it’s a “cap” option)
+  const maxLen = Math.max(3, Math.min(10, settings.maxWordLen || 6));
+  if (targetWord.length > maxLen) targetWord = targetWord.slice(0, maxLen);
+
+  currentLetterIndex = 0;
+  firstCorrectInWord = false;
+
+  updateWordDisplay();
+  updateHUD();
+
+  if (settings.mode === "listen"){
+    speakQueued(`Listen. The word is ${targetWord}.`);
+    setStatus("Listen-first: click the word again if you want to hear it.", "gold", `The word is ${targetWord}.`);
+  }
+}
+
+function wordJustCompleted(){
+  wordsCompleted++;
+  score++;
+  updateHUD();
+}
+
+/* -----------------------------
+   Vehicles (Creation + Fairness)
+------------------------------ */
+function expectedLetter(){
+  return targetWord[currentLetterIndex] || "";
+}
+
+function assistBoost(){
+  if (!settings.assist) return 0;
+  // boost if missed this expected letter often
+  const exp = expectedLetter();
+  const misses = missByLetter[exp] || 0;
+  // 0..4 extra duplicates
+  return Math.min(4, Math.floor(misses / 2));
+}
+
+function createVehiclesForLane(y){
+  const alphabet = [...baseAlphabet];
+
+  // Base: include each target letter twice (already helps)
+  const extraLetters = targetWord.split('').flatMap(l => [l, l]);
+
+  // Extra help: duplicates of NEXT expected letter
+  const exp = expectedLetter();
+  const expBoost = assistBoost();
+  const extraNext = exp ? Array.from({length: expBoost}, () => exp) : [];
+
+  const allLetters = alphabet.concat(extraLetters, extraNext);
+
+  const used = new Set();
+  const lettersThisLane = [];
+
+  const numCars = 6;
+  for (let i = 0; i < numCars; i++){
+    let letter;
+    let guard = 0;
+    do{
+      letter = allLetters[Math.floor(Math.random() * allLetters.length)];
+      guard++;
+    } while (used.has(`${y}-${letter}`) && guard < 200);
+    used.add(`${y}-${letter}`);
+    lettersThisLane.push(letter);
+  }
+
+  const minGap = 70;
+  const dir = laneDirByY[y] || 1;
+
+  lettersThisLane.forEach((letter, i) => {
+    const isBonus = Math.random() < bonusChance();
+    const unit = carSpeedUnits[Math.floor(Math.random() * carSpeedUnits.length)];
+    const pxPerSecond = unit * 60;
+
+    let x;
+    if (dir === 1){
+      x = -canvas.width - i * (vehicleWidth + minGap);
+    }else{
+      x = canvas.width + canvas.width + i * (vehicleWidth + minGap);
+    }
+
+    vehicles.push({
+      x,
+      y,
+      w: vehicleWidth,
+      h: vehicleHeight,
+      dir,
+      baseSpeed: pxPerSecond,
+      speed: pxPerSecond,
+      color: isBonus ? '#ff69b4' : carColors[Math.floor(Math.random() * carColors.length)],
+      letter: isBonus ? '1+' : letter,
+      bonus: isBonus,
+      pulse: Math.random() * Math.PI * 2
+    });
+  });
+}
+
+function fullReset(){
+  vehicles.length = 0;
+  generateBridges();
+
+  frog.x = canvas.width / 2 - frogSize / 2;
+  frog.y = startY;
+  frog.tx = frog.x;
+  frog.ty = frog.y;
+
+  hop.active = false;
+  hopGraceTimer = 0;
+
+  gameOver = false;
+  gameWin = false;
+
+  lanesY.forEach(laneY => createVehiclesForLane(laneY));
+}
+
+function resetVehiclesOnly(){
+  vehicles.length = 0;
+  generateBridges();
+  gameOver = false;
+  gameWin = false;
+  lanesY.forEach(laneY => createVehiclesForLane(laneY));
+}
+
+/* Spawn safety: prevent wrap-spawn on frog if same lane */
+function respawnXForCar(car){
+  const buffer = 18;
+  const dir = car.dir;
+  let x = (dir === 1) ? (-vehicleWidth - Math.random() * 90) : (canvas.width + vehicleWidth + Math.random() * 90);
+
+  if (!settings.spawnSafe) return x;
+
+  // If frog is in the same band as car (road band), avoid spawning within frog range
+  const frogBandTop = Math.floor(frog.y / laneHeight) * laneHeight;
+  if (frogBandTop === car.y){
+    const frogLeft = frog.x - buffer;
+    const frogRight = frog.x + frogSize + buffer;
+
+    // If candidate would overlap frog zone, push further away
+    if (dir === 1){
+      // car comes from left
+      const carRightAtSpawn = x + vehicleWidth;
+      if (carRightAtSpawn > frogLeft){
+        x = frogLeft - vehicleWidth - 30 - Math.random()*60;
+      }
+    }else{
+      // car comes from right
+      if (x < frogRight){
+        x = frogRight + 30 + Math.random()*60;
+      }
+    }
+  }
+
+  return x;
+}
+
+/* -----------------------------
+   Drawing
+------------------------------ */
+function drawBackground(){
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--safe').trim();
+  ctx.fillRect(0, 0, canvas.width, laneHeight);
+  ctx.fillRect(0, canvas.height - laneHeight, canvas.width, laneHeight);
+
+  rivers.forEach((riverY, idx) => {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--river').trim();
+    ctx.fillRect(0, riverY, canvas.width, laneHeight);
+
+    const bridges = riverBridges[idx] || [];
+    bridges.forEach(bridgeX => {
+      const plankW = 5;
+      for (let i = 0; i < bridgeWidth; i += plankW){
+        ctx.fillStyle = (i % (plankW*2) === 0) ? '#f5deb3' : '#deb887';
+        ctx.fillRect(bridgeX + i, riverY, plankW, laneHeight);
+      }
+      ctx.fillStyle = 'rgba(0,0,0,0.15)';
+      ctx.fillRect(bridgeX, riverY + 2, bridgeWidth, 2);
+      ctx.fillRect(bridgeX, riverY + laneHeight - 4, bridgeWidth, 2);
+
+      if (settings.bridgeLabels){
+  const tx = bridgeX + bridgeWidth/2;
+  const ty = riverY + laneHeight/2;
+
+  ctx.save();
+  ctx.font = 'bold 11px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // dark outline for readability
+  ctx.strokeStyle = 'rgba(0,0,0,0.70)';
+  ctx.lineWidth = 3;
+  ctx.strokeText('BRIDGE', tx, ty);
+
+  // light fill on top
+  ctx.fillStyle = 'rgba(255,255,255,0.92)';
+  ctx.fillText('BRIDGE', tx, ty);
+
+  ctx.restore();
+}
+    });
+  });
+
+  lanesY.forEach(y => {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--road').trim();
+    ctx.fillRect(0, y, canvas.width, laneHeight);
+
+    // dashed line (center)
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    for (let i = 0; i < canvas.width; i += 36){
+      ctx.fillRect(i, y + laneHeight/2 - 1, 18, 2);
+    }
+  });
+
+  // separators
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  for (let y = 0; y <= canvas.height; y += laneHeight){
+    ctx.fillRect(0, y, canvas.width, 1);
+  }
+}
+
+function drawFrog(){
+  // Hop arc + squash/stretch (light)
+  let fx = frog.x;
+  let fy = frog.y;
+
+  let sx = 1, sy = 1;
+  if (hop.active){
+    const t = hop.t / hop.dur; // 0..1
+    const tt = Math.max(0, Math.min(1, t));
+    const arc = 1 - Math.pow(2*tt - 1, 2); // parabola peak at mid
+    const jumpH = 10; // px
+    fx = hop.sx + (hop.ex - hop.sx) * tt;
+    fy = hop.sy + (hop.ey - hop.sy) * tt - arc * jumpH;
+
+    // squash/stretch
+    sx = 1 + 0.10 * arc;
+    sy = 1 - 0.10 * arc;
+  }
+
+  ctx.save();
+  ctx.translate(fx + frogSize/2, fy + frogSize/2);
+  ctx.scale(sx, sy);
+  ctx.translate(-frogSize/2, -frogSize/2);
+
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--frog').trim();
+  ctx.fillRect(0, 0, frogSize, frogSize);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillRect(3, 3, 2, 2);
+  ctx.fillRect(frogSize - 5, 3, 2, 2);
+
+  ctx.restore();
+}
+
+/* Next-letter highlight/beacon */
+function drawBeacon(x, y){
+  // small arrow above car
+  ctx.save();
+  ctx.fillStyle = 'rgba(241,196,15,0.95)';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - 6, y - 10);
+  ctx.lineTo(x + 6, y - 10);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawVehicles(dt){
+  // lane grouping
+  const lanesMap = {};
+  for (let car of vehicles){
+    if (!lanesMap[car.y]) lanesMap[car.y] = [];
+    lanesMap[car.y].push(car);
+  }
+
+  // expected letter for highlighting
+  const exp = expectedLetter();
+
+  for (let y in lanesMap){
+    const cars = lanesMap[y];
+    const dir = cars[0]?.dir || 1;
+
+    // Following logic to prevent overlap (same as before, improved stability)
+    for (let i = 0; i < cars.length; i++){
+      const car = cars[i];
+      car.speed = car.baseSpeed * speedMultiplier();
+
+      let best = null;
+      let bestDist = Infinity;
+
+      for (let j = 0; j < cars.length; j++){
+        if (i === j) continue;
+        const other = cars[j];
+
+        let dist;
+        if (dir === 1){
+          dist = (other.x - car.x);
+          if (dist <= 0) dist += (canvas.width + canvas.width);
+        }else{
+          dist = (car.x - other.x);
+          if (dist <= 0) dist += (canvas.width + canvas.width);
+        }
+
+        if (dist < bestDist){
+          bestDist = dist;
+          best = other;
+        }
+      }
+
+      const desiredGap = car.w + 14;
+      if (best && bestDist < desiredGap){
+        car.speed = Math.min(car.speed, best.speed);
+      }
+    }
+
+    for (let i = 0; i < cars.length; i++){
+      const car = cars[i];
+
+      if (dt > 0){
+        car.x += (car.dir === 1 ? 1 : -1) * car.speed * dt;
+
+        // wrap + spawn safe
+        if (car.dir === 1 && car.x > canvas.width + 70){
+          car.x = respawnXForCar(car);
+          car.baseSpeed = carSpeedUnits[Math.floor(Math.random() * carSpeedUnits.length)] * 60;
+        } else if (car.dir === -1 && car.x < -vehicleWidth - 70){
+          car.x = respawnXForCar(car);
+          car.baseSpeed = carSpeedUnits[Math.floor(Math.random() * carSpeedUnits.length)] * 60;
+        }
+      }
+
+      const carY = car.y + CAR_Y_OFFSET;
+
+      // Highlight for next-letter cars (visual aid)
+      const isNext = (!car.bonus && exp && car.letter === exp);
+
+      if (car.bonus){
+        car.pulse += dt * 6;
+        const glow = 0.35 + 0.25 * Math.sin(car.pulse);
+        ctx.save();
+        ctx.shadowColor = `rgba(255,105,180,${glow})`;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = car.color;
+        ctx.fillRect(car.x, carY, car.w, car.h);
+        ctx.restore();
+      }else if (settings.highlight && isNext){
+        ctx.save();
+        ctx.shadowColor = 'rgba(241,196,15,0.55)';
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = car.color;
+        ctx.fillRect(car.x, carY, car.w, car.h);
+        ctx.restore();
+
+        // Outline for clarity
+        ctx.strokeStyle = 'rgba(241,196,15,0.95)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(car.x + 1, carY + 1, car.w - 2, car.h - 2);
+      }else{
+        ctx.fillStyle = car.color;
+        ctx.fillRect(car.x, carY, car.w, car.h);
+      }
+
+      // Beacon arrow
+      if (settings.beacon && isNext){
+        drawBeacon(car.x + car.w/2, carY - 2);
+      }
+
+      // Letter
+      ctx.fillStyle = 'white';
+      ctx.font = '14px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(car.letter, car.x + car.w/2, carY + car.h/2);
+    }
+  }
+}
+
+/* -----------------------------
+   Collisions (AABB) + Fairness
+------------------------------ */
+function rectsOverlap(a, b){
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+function frogRect(){
+  return { x: frog.x, y: frog.y, w: frogSize, h: frogSize };
+}
+
+/* Pooled pop particles (performance) */
+const pops = [];
+const POP_MAX = 120;
+
+function spawnPop(x, y, kind="good"){
+  // kind: good/bad/bonus
+  for (let k = 0; k < 10; k++){
+    if (pops.length >= POP_MAX) pops.shift();
+    pops.push({
+      x, y,
+      vx: (Math.random()-0.5) * 180,
+      vy: -40 - Math.random()*120,
+      g: 420 + Math.random()*240,
+      life: 0.45 + Math.random()*0.25,
+      kind
+    });
+  }
+}
+
+function drawPops(dt){
+  if (!pops.length) return;
+  for (let i = pops.length - 1; i >= 0; i--){
+    const p = pops[i];
+    p.life -= dt;
+    p.vy += p.g * dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    if (p.life <= 0){
+      pops.splice(i, 1);
+      continue;
+    }
+    const alpha = Math.max(0, Math.min(1, p.life / 0.6));
+    if (p.kind === "good") ctx.fillStyle = `rgba(46,204,113,${alpha})`;
+    else if (p.kind === "bonus") ctx.fillStyle = `rgba(255,105,180,${alpha})`;
+    else ctx.fillStyle = `rgba(231,76,60,${alpha})`;
+
+    ctx.beginPath();
+	    ctx.beginPath();
+    ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/* -----------------------------
+   Input Helpers
+------------------------------ */
+function isTouchDevice(){
+  return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+}
+
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+
+/* Snap frog y to lane bodies (NOT dashed line).
+   The frog always lives in "band slots": roads (lanesY), rivers (rivers), safe zones (0 and bottom band).
+*/
+function snapYToBandSlot(y){
+  // bands are multiples of laneHeight: 0,40,80,...,480
+  const bandTop = Math.round(y / laneHeight) * laneHeight;
+  // if river band, use river slot; if road band, use road slot; if safe band, use safe slot
+  const inRiver = rivers.includes(bandTop);
+  const inRoad  = lanesY.includes(bandTop);
+  // safe zone bands: 0 and canvas.height - laneHeight
+  const inSafeTop = (bandTop === 0);
+  const inSafeBottom = (bandTop === canvas.height - laneHeight);
+
+  if (inRiver){
+    // keep frog inside the river band body (same slot logic as cars)
+    return bandSlotY(bandTop);
+  }
+  if (inRoad){
+    return bandSlotY(bandTop);
+  }
+  if (inSafeTop){
+    return bandSlotY(0);
+  }
+  if (inSafeBottom){
+    return bandSlotY(canvas.height - laneHeight);
+  }
+  // fallback
+  return bandSlotY(bandTop);
+}
+
+function snapXToGrid(x){
+  // Keep 20px grid so frog never drifts into weird half positions
+  const gx = Math.round(x / frogStepX) * frogStepX;
+  return clamp(gx, 0, canvas.width - frogSize);
+}
+
+function startHop(toX, toY){
+  // If smooth mode is on, we animate between current and target.
+  // Even if smooth is off, we still do a quick hop arc.
+  hop.active = true;
+  hop.t = 0;
+  hop.sx = frog.x; hop.sy = frog.y;
+  hop.ex = toX;    hop.ey = toY;
+
+  frog.tx = toX;
+  frog.ty = toY;
+
+  // micro grace after hop (optional)
+  if (settings.hitGrace){
+    hopGraceTimer = HOP_GRACE_SECONDS;
+  }
+}
+
+function moveFrogBy(dx, dy){
+  if (paused || gameOver || gameWin) return;
+
+  const toX = snapXToGrid(frog.tx + dx);
+  const toBand = snapYToBandSlot(frog.ty + dy);
+  const toY = clamp(toBand, 0, canvas.height - frogSize);
+
+  startHop(toX, toY);
+}
+
+/* -----------------------------
+   River Check (bridge safety)
+------------------------------ */
+function frogOnBridgeAtRiverBand(riverTopY){
+  const idx = rivers.indexOf(riverTopY);
+  if (idx < 0) return true;
+  const bridges = riverBridges[idx] || [];
+  const fx1 = frog.x;
+  const fx2 = frog.x + frogSize;
+  // bridge rect: [bx, bx+bridgeWidth]
+  return bridges.some(bx => fx2 > bx && fx1 < bx + bridgeWidth);
+}
+
+function handleRiverIfNeeded(){
+  const bandTop = Math.floor(frog.ty / laneHeight) * laneHeight;
+  if (!rivers.includes(bandTop)) return;
+
+  const ok = frogOnBridgeAtRiverBand(bandTop);
+  if (!ok){
+    loseLife("Splash! You missed the bridge.", "bad", "Splash. Try the bridge.");
+  }
+}
+
+/* -----------------------------
+   Game events (life/lose/win)
+------------------------------ */
+function loseLife(msg, tone="bad", speakMsg=""){
+  lives--;
+  updateHUD();
+  setStatus(msg, tone, speakMsg || msg);
+
+  spawnPop(frog.x + frogSize/2, frog.y + frogSize/2, "bad");
+
+  if (lives <= 0){
+    gameOver = true;
+    cancelSpeech();
+    speakQueued("Game over.");
+    showOverlay("Game Over", `You ran out of lives. Score: ${score}. Words: ${Math.min(wordsCompleted,5)}/5.`);
+    // keep state; overlay buttons control next
+    return;
+  }
+
+  // reset frog to start
+  frog.tx = canvas.width / 2 - frogSize / 2;
+  frog.tx = snapXToGrid(frog.tx);
+  frog.ty = startY;
+  frog.x = frog.tx;
+  frog.y = frog.ty;
+  hop.active = false;
+}
+
+function winGame(){
+  gameWin = true;
+  cancelSpeech();
+  speakQueued("You win!");
+  showOverlay("You Win!", `You completed 5 words and crossed safely. Score: ${score}.`);
+}
+
+function startNewGame(resetWordsToo=true){
+  cancelSpeech();
+  score = 0;
+  lives = 1;
+  wordsCompleted = 0;
+  speedRamp = 0;
+  for (const k in missByLetter) delete missByLetter[k];
+
+  if (resetWordsToo) chooseWordSmart();
+  else {
+    currentLetterIndex = 0;
+    firstCorrectInWord = false;
+    updateWordDisplay();
+  }
+
+  setStatus("Collect letters in order.", "gold", "Collect letters in order.");
+  updateHUD();
+  fullReset();
+}
+
+/* -----------------------------
+   Collision Resolution
+------------------------------ */
+function resolveCarCollisions(){
+  // fairness: if grace active, skip collision checks
+  if (settings.hitGrace && hopGraceTimer > 0) return;
+
+  const fr = frogRect();
+  const frogBandTop = Math.floor(frog.ty / laneHeight) * laneHeight;
+
+  // Only collide with cars in the SAME road band (prevents “next lane hit”)
+  // Cars live in road bands (lanesY), and we also draw them inside that band.
+  if (!lanesY.includes(frogBandTop)) return;
+
+  const exp = expectedLetter();
+
+  for (let i = vehicles.length - 1; i >= 0; i--){
+    const car = vehicles[i];
+    if (car.y !== frogBandTop) continue; // same lane band only
+
+    const carRect = { x: car.x, y: car.y + CAR_Y_OFFSET, w: car.w, h: car.h };
+    if (!rectsOverlap(fr, carRect)) continue;
+
+    if (car.bonus){
+      lives++;
+      updateHUD();
+      setStatus("Bonus! +1 life.", "good", "Bonus life.");
+      spawnPop(car.x + car.w/2, carRect.y + carRect.h/2, "bonus");
+      vehicles.splice(i, 1);
+      continue;
+    }
+
+    // Wrong vs correct letter
+    if (car.letter === exp){
+      firstCorrectInWord = true;
+      const cue = letterCue(car.letter);
+
+      // speak letter (or phonics)
+      speakQueued(cue);
+
+      currentLetterIndex++;
+      updateWordDisplay();
+
+      spawnPop(car.x + car.w/2, carRect.y + carRect.h/2, "good");
+      vehicles.splice(i, 1);
+
+      setStatus(`Nice. Got ${car.letter}. Next: ${expectedLetter() || "done"}.`, "good",
+        `Correct. ${cue}.`);
+
+      if (currentLetterIndex >= targetWord.length){
+        // word completed
+        wordJustCompleted();
+        spawnPop(frog.x + frogSize/2, frog.y + frogSize/2, "good");
+
+        speakQueued(`Great. ${targetWord}.`);
+
+        chooseWordSmart();
+        resetVehiclesOnly();
+
+        setStatus(`Word complete! New word: ${targetWord}.`, "good", `New word. ${targetWord}.`);
+      }
+    } else {
+      // miss
+      const need = exp || "?";
+      missByLetter[need] = (missByLetter[need] || 0) + 1;
+
+      const gotCue = letterCue(car.letter);
+      const needCue = letterCue(need);
+
+      setStatus(`Oops. Needed ${need}, got ${car.letter}.`, "bad",
+        `Oops. Needed ${needCue}. Got ${gotCue}.`);
+
+      speakQueued(`Oops. Needed ${need}. Got ${car.letter}.`);
+
+      loseLife(`Oops. Needed ${need}, got ${car.letter}.`, "bad");
+      return;
+    }
+  }
+}
+
+/* -----------------------------
+   Click cars to hear letters (optional)
+------------------------------ */
+function carAtPoint(px, py){
+  // translate click to car hit test
+  for (let i = vehicles.length - 1; i >= 0; i--){
+    const car = vehicles[i];
+    const r = { x: car.x, y: car.y + CAR_Y_OFFSET, w: car.w, h: car.h };
+    if (px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h){
+      return car;
+    }
+  }
+  return null;
+}
+
+canvas.addEventListener('click', (e) => {
+  if (!settings.carClick) return;
+  const rect = canvas.getBoundingClientRect();
+  const px = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const py = (e.clientY - rect.top)  * (canvas.height / rect.height);
+  const car = carAtPoint(px, py);
+  if (car){
+    if (car.bonus) speakQueued("Bonus car. One plus.");
+    else speakQueued(letterCue(car.letter));
+  }
+});
+
+/* -----------------------------
+   Controls (existing + added)
+------------------------------ */
+document.getElementById('toggleSoundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  const btn = document.getElementById('toggleSoundBtn');
+  btn.textContent = soundOn ? "🔊 On" : "🔇 Off";
+  btn.setAttribute("aria-pressed", soundOn ? "true" : "false");
+  if (!soundOn) cancelSpeech();
+});
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  chooseWordSmart();
+  resetVehiclesOnly();
+  setStatus(`New word: ${targetWord}. Next: ${targetWord[0]}.`, "gold", `New word. ${targetWord}.`);
+});
+
+document.getElementById('submitBtn').addEventListener('click', () => {
+  const custom = document.getElementById('customWordInput').value.trim();
+  if (custom.length > 0){
+    targetWord = sanitizeWord(custom);
+    if (!targetWord) targetWord = "CAT";
+    currentLetterIndex = 0;
+    firstCorrectInWord = false;
+    updateWordDisplay();
+    resetVehiclesOnly();
+    setStatus(`Custom word set: ${targetWord}.`, "gold", `Custom word. ${targetWord}.`);
+    if (settings.mode === "listen") speakQueued(`Listen. The word is ${targetWord}.`);
+  }
+});
+
+document.getElementById('csvSubmitBtn').addEventListener('click', () => {
+  const csv = document.getElementById('csvInput').value.trim();
+  if (csv.length > 0){
+    const list = sanitizeCSV(csv);
+    if (list.length){
+      wordBank = list;
+      chooseWordSmart();
+      resetVehiclesOnly();
+      setStatus(`Custom list loaded (${wordBank.length} words).`, "gold", "Custom list loaded.");
+    }
+  }
+});
+
+document.getElementById('newGameBtn').addEventListener('click', () => {
+  hideOverlay();
+  startNewGame(true);
+});
+
+document.getElementById('smoothBtn').addEventListener('click', () => {
+  frog.smooth = !frog.smooth;
+  const b = document.getElementById('smoothBtn');
+  b.textContent = frog.smooth ? "Smooth: On" : "Smooth: Off";
+  b.setAttribute("aria-pressed", frog.smooth ? "true" : "false");
+});
+
+document.getElementById('pauseBtn').addEventListener('click', () => {
+  paused = !paused;
+  const b = document.getElementById('pauseBtn');
+  b.textContent = paused ? "Resume" : "Pause";
+  b.setAttribute("aria-pressed", paused ? "true" : "false");
+  setStatus(paused ? "Paused." : "Go!", "gold", paused ? "Paused." : "");
+});
+
+/* Word click reads full word */
+elWordDisplay.addEventListener('click', () => {
+  if (settings.mode === "listen"){
+    speakQueued(`The word is ${targetWord}.`);
+  } else {
+    speakQueued(targetWord);
+  }
+});
+
+/* Keyboard */
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'p' || e.key === 'P'){
+    document.getElementById('pauseBtn').click();
+    return;
+  }
+  if (paused) return;
+
+  if (e.key === 'ArrowUp')    moveFrogBy(0, -frogStepY);
+  if (e.key === 'ArrowDown')  moveFrogBy(0,  frogStepY);
+  if (e.key === 'ArrowLeft')  moveFrogBy(-frogStepX, 0);
+  if (e.key === 'ArrowRight') moveFrogBy( frogStepX, 0);
+});
+
+/* D-pad */
+function bindPad(id, dx, dy){
+  const b = document.getElementById(id);
+  b.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    moveFrogBy(dx, dy);
+  });
+}
+bindPad('padUp', 0, -frogStepY);
+bindPad('padDown', 0, frogStepY);
+bindPad('padLeft', -frogStepX, 0);
+bindPad('padRight', frogStepX, 0);
+
+/* -----------------------------
+   Main Update Loop
+------------------------------ */
+let lastT = performance.now();
+
+function step(dt){
+  // ramp difficulty smoothly
+  const target = targetSpeedRamp();
+  speedRamp += (target - speedRamp) * Math.min(1, dt * 2.5);
+
+  // hop timer
+  if (hop.active){
+    hop.t += dt;
+    if (hop.t >= hop.dur){
+      hop.active = false;
+      // commit final
+      frog.x = frog.tx;
+      frog.y = frog.ty;
+    } else {
+      // while hopping, we still consider frog to be at target lane for fairness checks (frog.ty)
+      frog.x = frog.tx;
+      frog.y = frog.ty;
+    }
+  }
+
+  // smooth movement (optional) applies only when not hopping
+  if (!hop.active && frog.smooth){
+    const k = 18;
+    frog.x += (frog.tx - frog.x) * Math.min(1, dt * k);
+    frog.y += (frog.ty - frog.y) * Math.min(1, dt * k);
+  } else if (!hop.active){
+    frog.x = frog.tx;
+    frog.y = frog.ty;
+  }
+
+  if (settings.hitGrace && hopGraceTimer > 0){
+    hopGraceTimer = Math.max(0, hopGraceTimer - dt);
+  }
+
+  // river check right after hop completes (or while in river band)
+  handleRiverIfNeeded();
+
+  // collisions
+  resolveCarCollisions();
+
+  // win check: must be in top safe band AND 5 words completed
+  const bandTop = Math.floor(frog.ty / laneHeight) * laneHeight;
+  if (!gameWin && !gameOver && wordsCompleted >= 5 && bandTop === 0){
+    winGame();
+  }
+}
+
+function render(dt){
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawBackground();
+
+  // NOTE: when paused, we still draw but do not move cars
+  drawVehicles(paused ? 0 : dt);
+
+  drawPops(dt);
+  drawFrog();
+
+  // overlay helpers (hit grace indicator)
+  if (settings.hitGrace && hopGraceTimer > 0){
+    ctx.save();
+    ctx.strokeStyle = 'rgba(241,196,15,0.55)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(frog.x - 2, frog.y - 2, frogSize + 4, frogSize + 4);
+    ctx.restore();
+  }
+}
+
+function loop(t){
+  const dt = Math.min(0.033, (t - lastT) / 1000);
+  lastT = t;
+
+  if (!paused && !gameOver && !gameWin){
+    step(dt);
+  } else {
+    // still tick particles a bit
+    drawPops(dt);
+  }
+
+  render(dt);
+
+  requestAnimationFrame(loop);
+}
+
+/* -----------------------------
+   Boot
+------------------------------ */
+loadSettings();
+applySettingsToUI();
+
+// init UI state of smooth/pause buttons
+document.getElementById('smoothBtn').textContent = frog.smooth ? "Smooth: On" : "Smooth: Off";
+document.getElementById('smoothBtn').setAttribute("aria-pressed", frog.smooth ? "true" : "false");
+document.getElementById('pauseBtn').textContent = "Pause";
+document.getElementById('pauseBtn').setAttribute("aria-pressed", "false");
+
+// default mode selection if none checked
+if (!modeRadios.some(r => r.checked)){
+  modeRadios.find(r => r.value === settings.mode)?.click();
+}
+
+// Start
+chooseWordSmart();
+setStatus("Collect letters in order.", "gold", "Collect letters in order.");
+updateHUD();
+fullReset();
+
+// Touch detection for D-pad auto show
+document.getElementById('dpad').classList.toggle('show', isTouchDevice() && settings.dpad);
+
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
